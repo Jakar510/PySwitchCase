@@ -5,7 +5,8 @@ A pure python way to efficiently do a c++ style switch case in Python 3.6+.
 
 ------------- Usage Examples -------------
 
-    # example 1
+example 1
+
     test = 10
     with SwitchCase(test) as sc:
         sc(2, on_true=print, on_true_args=('test 1',) )
@@ -14,7 +15,8 @@ A pure python way to efficiently do a c++ style switch case in Python 3.6+.
         print('sub 2')
         sc(12, on_true=print, on_true_args=('test 3',) )
 
-    # example 2
+example 2
+
     test = '10'
     with SwitchCase(test, catch_value_to_check=True) as sc:
         on_true = lambda x: print(f'testing... {x}')
@@ -25,7 +27,8 @@ A pure python way to efficiently do a c++ style switch case in Python 3.6+.
         print('sub 2')
         sc('10', on_true=on_true)  # will break here due to match found.
 
-    # example 3
+example 3
+    
     def run_test(*args, **kwargs):
         return {
                 'args': args,
