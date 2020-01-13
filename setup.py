@@ -6,7 +6,7 @@ setup(
         name='PySwitchCase',
         version=__version__,
         packages=[''],
-        url='',
+        url='https://github.com/Jakar510/PySwitchCase',
         license='Proprietary',
         author='Tyler Stegmaier',
         author_email='',
