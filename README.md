@@ -3,6 +3,7 @@ A pure python way to efficiently do a c++ style switch case in Python 3.7+. Shou
 
 Any improvements and/or optimizations are welcome.
 
+PyPi Page: https://pypi.org/project/PySwitchCase/
 
 # ------------- Usage -------------
 See https://github.com/Jakar510/PySwitchCase/blob/master/src/PySwitchCase/examples.py for more examples.
