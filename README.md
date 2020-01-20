@@ -1,6 +1,7 @@
 # PySwitchCase
 A pure python way to efficiently do a c++ style switch case in Python 3.7+. Should work in 3.6 as well.
 
+Any improvements and/or optimizations are welcome.
 
 
 # ------------- Usage -------------

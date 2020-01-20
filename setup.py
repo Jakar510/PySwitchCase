@@ -12,6 +12,7 @@ setup(
         version=version,
         packages=['PySwitchCase'],
         url='https://github.com/Jakar510/PySwitchCase',
+        download_url='https://github.com/Jakar510/PySwitchCase/releases/tag/v1.0.0',
         license='GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007',
         author='Tyler Stegmaier',
         author_email='tyler.stegmaier.510@gmail.com',
