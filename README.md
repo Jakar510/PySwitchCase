@@ -6,7 +6,7 @@ Any improvements and/or optimizations are welcome.
 PyPi Page: https://pypi.org/project/PySwitchCase/
 
 # ------------- Usage -------------
-See https://github.com/Jakar510/PySwitchCase/blob/master/src/PySwitchCase/examples.py for more examples.
+See [this](https://github.com/Jakar510/PySwitchCase/blob/master/src/PySwitchCase/examples.py) for more examples.
 
 example 1
 
