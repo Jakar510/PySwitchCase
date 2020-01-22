@@ -105,99 +105,96 @@ class SwitchCase(object):
             elif issubclass(self._no_match_handler, BaseException): raise self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
     def __exit(self):
         raise BreakCase()
-    def _to_type(self, obj: any):
+    @staticmethod
+    def _to_type(obj: any):
         return type(obj) if obj.__class__ != type.__class__ else obj
-    def __call__(self, value_to_check: any, *, on_true: callable = None, on_true_args: tuple = (), **kwargs) -> bool:
+    def _convert_to_types(self, value_to_check: any) -> tuple or type:
+        if isinstance(value_to_check, (list, tuple)):
+            return tuple(map(self._to_type, value_to_check))
+
+        elif value_to_check.__class__ != type.__class__:
+            return type(value_to_check)
+    def __setattr__(self, key, value):
+        if key not in ['result', '_active'] and self._active: self._raise_active(key, value)
+        super().__setattr__(key, value)
+
+    def _raise_inactive(self):
+        raise InactiveSessionError(""" Context Manager Must be Used
+
+        For example:
+
+        # value_to_check = one of [ variable OR instance OR type OR tuple of types ]
+        with SwitchCase(value_to_check) as sc:
+            sc(value_to_search_for)
+            ...
+        """)
+    def _raise_active(self, key, value):
+        raise ActiveSessionError(f"""Attributes cannot be changed while context manager is active. 
+    key: {key} 
+    value: {value} """)
+
+    def set_variable_to_check(self, new):
+        self._variable_to_check = new
+
+    def __call__(self, value_to_check: any, *args, callback: callable = None, **kwargs) -> bool:
         """
             Exits the Context Manger if a match is found with self.__exit().
 
-        :param value_to_check: the instance or value to check self._variable_to_check against.
+        :param value_to_check: the instance or value to check self._variable_to_check against. Should be one of [ variable OR instance OR type OR tuple of types ].
         :type value_to_check: any value (example: integer, string, float, etc.) or tuple of types or type
 
-        :param on_true: handler method to be called if match is True.
-        :param on_true_args: on_true's args if match is True.
-        :param kwargs: on_true's kwargs if match is True.
+        :param callback: handler method to be called if match is True.
+        :param args: callback's args if match is True: callback(*args, **kwargs).
+        :param kwargs: on_true's kwargs if match is True: callback(*args, **kwargs).
         :return: bool.
         """
-        if not self._active: raise InactiveSessionError(""" Context Manager Must be Used
+        if not self._active: self._raise_inactive()
+        if self._catch_value_to_check: args = (value_to_check, *args)  # adds this value_to_check to the callback's args.
 
-For example:
 
-with SwitchCase(variable) as sc:
-    sc(value_to_search_for)
-    ...
-""")
-        result = False
-        if self._catch_value_to_check: on_true_args = (value_to_check, *on_true_args)
 
-        if callable(on_true):
+        checked = False
+        if callable(callback):
             if self._Check_SubClass:
-                if isinstance(value_to_check, tuple):
-                    value_to_check = tuple(map(self._to_type, value_to_check))
+                if issubclass(type(self._variable_to_check), self._convert_to_types(value_to_check)):
+                    self.result = callback(*args, **kwargs)
+                    checked = True
 
-                elif value_to_check.__class__ != type.__class__:
-                    value_to_check = type(value_to_check)
-
-                if issubclass(type(self._variable_to_check), value_to_check):
-                    self.result = on_true(*on_true_args, **kwargs)
-                    result = True
 
             elif self._Check_Instance:
-                if isinstance(value_to_check, tuple):
-                    value_to_check = tuple(map(self._to_type, value_to_check))
+                if isinstance(self._variable_to_check, self._convert_to_types(value_to_check)):
+                    self.result = callback(*args, **kwargs)
+                    checked = True
 
-                elif value_to_check.__class__ != type.__class__:
-                    value_to_check = type(value_to_check)
-
-                if isinstance(self._variable_to_check, value_to_check):
-                    self.result = on_true(*on_true_args, **kwargs)
-                    result = True
 
             elif self._check_address and self._variable_to_check is value_to_check:
-                self.result = on_true(*on_true_args, **kwargs)
-                result = True
+                self.result = callback(*args, **kwargs)
+                checked = True
+
 
             elif self._variable_to_check == value_to_check:
-                self.result = on_true(*on_true_args, **kwargs)
-                result = True
+                self.result = callback(*args, **kwargs)
+                checked = True
 
         else:
             if self._Check_SubClass:
-                if isinstance(value_to_check, tuple):
-                    value_to_check = tuple(map(self._to_type, value_to_check))
+                checked = issubclass(type(self._variable_to_check), self._convert_to_types(value_to_check))
 
-                elif value_to_check.__class__ != type.__class__:
-                    value_to_check = type(value_to_check)
-
-                result = issubclass(type(self._variable_to_check), value_to_check)
 
             elif self._Check_Instance:
-                if isinstance(value_to_check, tuple):
-                    value_to_check = tuple(map(self._to_type, value_to_check))
+                checked = isinstance(self._variable_to_check, self._convert_to_types(value_to_check))
 
-                elif value_to_check.__class__ != type.__class__:
-                    value_to_check = type(value_to_check)
-
-                result = isinstance(self._variable_to_check, value_to_check)
-
-            elif self._check_address and self._variable_to_check is value_to_check:
-                self.result = on_true(*on_true_args, **kwargs)
-                result = True
 
             elif self._check_address:
-                result = self._variable_to_check is value_to_check
+                checked = self._variable_to_check is value_to_check
+
 
             else:
-                result = self._variable_to_check == value_to_check
+                checked = self._variable_to_check == value_to_check
 
-        if result: self.__exit()
 
-        return result
+        if checked: self.__exit()
+        return checked
 
-    def __setattr__(self, key, value):
-        if key not in ['result', '_active'] and self._active: raise ActiveSessionError(f'Attributes cannot be changed while context manager is active. \nkey: {key} \nvalue: {value}')
-        super().__setattr__(key, value)
 
-    def set_variable_to_check(self, new):
-        self.__setattr__('_variable_to_check', new)
 
