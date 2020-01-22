@@ -1,8 +1,12 @@
+import re
+
+
+
 
 class BreakCase(Exception): pass
 class ActiveSessionError(Exception): pass
 class InactiveSessionError(Exception): pass
-
+class InvalidRegexObject(Exception): pass
 
 class SwitchCase(object):
     """
@@ -64,14 +68,15 @@ class SwitchCase(object):
                  Check_Instance: bool = False,
                  Check_SubClass: bool = False,
                  catch_value_to_check: bool = False,
+                 regex_object: callable = None,
 
                  no_match_handler: callable or Exception = None,
                  no_match_handler_args: tuple = (),
                  **kwargs):
         """
-
-
         :param variable_to_check: the instance to check against.
+        :param regex_object: the instance to check against.
+        :param regex_pattern: the instance to check against.
         :param Check_Address: Checks the addresses between variable_to_check and the value_to_check, using "is".
         :param catch_value_to_check: If match is True, added the value_to_check to on_true_args at the start.
         :param no_match_handler: Optional Method that is called if no match is found or Exception that is raised if no match is found.
@@ -80,13 +85,18 @@ class SwitchCase(object):
         """
         if not hasattr(variable_to_check, '__eq__'):
             raise ValueError(f'variable_to_check is not comparable type. {type(variable_to_check)}')
-        if no_match_handler is None and no_match_handler_args != () and kwargs != {}:
+        if no_match_handler is None and no_match_handler_args != () and kwargs != { }:
             raise ValueError('no_match_handler is None but its args and kwargs are passed in.')
         self._variable_to_check = variable_to_check
         self._check_address = Check_Address
         self._Check_Instance = Check_Instance
         self._Check_SubClass = Check_SubClass
 
+        if regex_object is not None:
+            if isinstance(regex_object, type(re.compile(r'.'))):
+                raise InvalidRegexObject(""" The regex object passed in should be a compiled pattern.
+Example: regex_object=re.compile('.*', flags=0) """)
+        self._regex_object = regex_object
 
         self._no_match_handler = no_match_handler
         self._catch_value_to_check = catch_value_to_check
@@ -98,11 +108,15 @@ class SwitchCase(object):
         return self
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._active = False
-        if isinstance(exc_val, BreakCase): return True
+        if isinstance(exc_val, BreakCase):
+            return True
         else:
-            if self._no_match_handler is None: pass
-            elif callable(self._no_match_handler): self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
-            elif issubclass(self._no_match_handler, BaseException): raise self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
+            if self._no_match_handler is None:
+                pass
+            elif callable(self._no_match_handler):
+                self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
+            elif issubclass(self._no_match_handler, BaseException):
+                raise self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
     def __exit(self):
         raise BreakCase()
     @staticmethod
@@ -151,8 +165,6 @@ class SwitchCase(object):
         if not self._active: self._raise_inactive()
         if self._catch_value_to_check: args = (value_to_check, *args)  # adds this value_to_check to the callback's args.
 
-
-
         checked = False
         if callable(callback):
             if self._Check_SubClass:
@@ -192,9 +204,10 @@ class SwitchCase(object):
             else:
                 checked = self._variable_to_check == value_to_check
 
-
         if checked: self.__exit()
         return checked
 
-
-
+    def __regex__(self, value_to_check: str) -> bool:  # TODO: implement regex parsing for the value_to_check
+        if not isinstance(value_to_check, str):
+            return False
+        return self._regex_object(value_to_check) is not None
