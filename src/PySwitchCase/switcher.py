@@ -1,5 +1,7 @@
 import re
+import warnings
 
+__all__ = ['SwitchCase', 'CallBackException', 'ActiveSessionError', 'InvalidRegexObject', 'InactiveSessionError']
 
 
 
@@ -7,6 +9,9 @@ class BreakCase(Exception): pass
 class ActiveSessionError(Exception): pass
 class InactiveSessionError(Exception): pass
 class InvalidRegexObject(Exception): pass
+class CallBackException(Exception): pass
+
+
 
 class SwitchCase(object):
     """
@@ -57,52 +62,61 @@ class SwitchCase(object):
     result = None
 
     _active: bool = False
-    _check_address: bool = False
+    _Check_Address: bool = False
     _Check_Instance: bool = False
     _Check_SubClass: bool = False
     _no_match_handler: callable
-    _no_match_handler_args: tuple
-    _no_match_handler_kwargs: dict
-    def __init__(self, variable_to_check: any, *,
-                 Check_Address: bool = False,
-                 Check_Instance: bool = False,
-                 Check_SubClass: bool = False,
-                 catch_value_to_check: bool = False,
-                 regex_object: callable = None,
-
-                 no_match_handler: callable or Exception = None,
-                 no_match_handler_args: tuple = (),
-                 **kwargs):
+    _no_match_callback_args: tuple
+    _no_match_callback_kwargs: dict
+    def __init__(self, variable_to_check: any, *args, catch_value_to_check: bool = False, regex_object: callable = None,
+                 Check_Address: bool = False, Check_Instance: bool = False, Check_SubClass: bool = False,
+                 no_match_callback: callable or Exception = None, **kwargs):
         """
         :param variable_to_check: the instance to check against.
         :param regex_object: the instance to check against.
         :param regex_pattern: the instance to check against.
         :param Check_Address: Checks the addresses between variable_to_check and the value_to_check, using "is".
         :param catch_value_to_check: If match is True, added the value_to_check to on_true_args at the start.
-        :param no_match_handler: Optional Method that is called if no match is found or Exception that is raised if no match is found.
-        :param no_match_handler_args: no_match_handler's args
-        :param kwargs: no_match_handler's kwargs
+        :param no_match_callback: Optional Method that is called if no match is found or Exception that is raised if no match is found.
+        :param no_match_handler_args (args): no_match_handler's args
+        :param no_match_handler_kwargs (kwargs): no_match_handler's kwargs
         """
         if not hasattr(variable_to_check, '__eq__'):
             raise ValueError(f'variable_to_check is not comparable type. {type(variable_to_check)}')
-        if no_match_handler is None and no_match_handler_args != () and kwargs != { }:
+        if no_match_callback is None and args != () and kwargs != { }:
             raise ValueError('no_match_handler is None but its args and kwargs are passed in.')
+
         self._variable_to_check = variable_to_check
-        self._check_address = Check_Address
+        self._Check_Address = Check_Address
         self._Check_Instance = Check_Instance
         self._Check_SubClass = Check_SubClass
 
+        if Check_SubClass and self._variable_to_check.__class != type.__class__:
+            self._variable_to_check = type(self._variable_to_check)
+
         if regex_object is not None:
+            warnings.warn('Regex objects are not fully implemented yet and currently wont work as expected.')
             if isinstance(regex_object, type(re.compile(r'.'))):
                 raise InvalidRegexObject(""" The regex object passed in should be a compiled pattern.
 Example: regex_object=re.compile('.*', flags=0) """)
         self._regex_object = regex_object
 
-        self._no_match_handler = no_match_handler
+        self._no_match_handler = no_match_callback
         self._catch_value_to_check = catch_value_to_check
-        self._no_match_handler_args = no_match_handler_args
-        self._no_match_handler_kwargs = kwargs
-
+        self._no_match_callback_args = args
+        self._no_match_callback_kwargs = kwargs
+    def _get_config(self) -> dict:
+        return {
+                'variable_to_check': repr(self._variable_to_check),
+                'Check_Address': self._Check_Address,
+                'Check_Instance': self._Check_Instance,
+                'Check_SubClass': self._Check_SubClass,
+                'catch_value_to_check': self._catch_value_to_check,
+                'regex_object': repr(self._regex_object) if self._regex_object is not None else None,
+                'no_match_callback': repr(self._no_match_handler) if self._no_match_handler is not None else None,
+                'no_match_callback_args': repr(self._no_match_callback_args) if self._no_match_callback_args is not None else None,
+                'no_match_callback_kwargs': repr(self._no_match_callback_kwargs) if self._no_match_callback_kwargs is not None else None,
+                }
     def __enter__(self):
         self._active = True
         return self
@@ -110,13 +124,15 @@ Example: regex_object=re.compile('.*', flags=0) """)
         self._active = False
         if isinstance(exc_val, BreakCase):
             return True
+
         else:
-            if self._no_match_handler is None:
-                pass
+            if self._no_match_handler is None: pass
+
             elif callable(self._no_match_handler):
-                self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
-            elif issubclass(self._no_match_handler, BaseException):
-                raise self._no_match_handler(*self._no_match_handler_args, **self._no_match_handler_kwargs)
+                self._no_match_handler(*self._no_match_callback_args, **self._no_match_callback_kwargs)
+
+            elif issubclass(self._no_match_handler, Exception):
+                raise self._no_match_handler(*self._no_match_callback_args, self._no_match_callback_kwargs) from exc_val
     def __exit(self):
         raise BreakCase()
     @staticmethod
@@ -167,37 +183,53 @@ Example: regex_object=re.compile('.*', flags=0) """)
 
         checked = False
         if callable(callback):
-            if self._Check_SubClass:
-                if issubclass(type(self._variable_to_check), self._convert_to_types(value_to_check)):
+            try:
+                # https://stackoverflow.com/questions/24752395/python-raise-from-usage
+                #     __cause__ is the cause of the exception - due to the given exception, the current exception was raised.
+                #         This is a direct link - X threw this exception, therefore Y has to throw this exception.
+                #
+                #     __context__ on the other hand means that the current exception was raised while trying to handle another exception,
+                #         and defines the exception that was being handled at the time this one was raised.
+                #         This is so that you don't loose the fact that the other exceptions happened (and hence were at this code to throw the exception) - the context.
+                #         X threw this exception, while handling it, Y was also thrown.
+                #
+                #     __traceback__ shows you the stack - the various levels of functions that have been followed to get to the current line of code.
+                #         This allows you to pinpoint what caused the exception.
+                #         It is likely to be used (potentially in tandem with __context__) to find what caused a given bug.
+                if self._Check_SubClass:
+                    if issubclass(type(self._variable_to_check), self._convert_to_types(value_to_check)):
+                        self.result = callback(*args, **kwargs)
+                        checked = True
+
+
+                elif self._Check_Instance:
+                    if isinstance(self._variable_to_check, self._convert_to_types(value_to_check)):
+                        self.result = callback(*args, **kwargs)
+                        checked = True
+
+
+                elif self._Check_Address and self._variable_to_check is value_to_check:
                     self.result = callback(*args, **kwargs)
                     checked = True
 
 
-            elif self._Check_Instance:
-                if isinstance(self._variable_to_check, self._convert_to_types(value_to_check)):
+                elif self._variable_to_check == value_to_check:
                     self.result = callback(*args, **kwargs)
                     checked = True
 
-
-            elif self._check_address and self._variable_to_check is value_to_check:
-                self.result = callback(*args, **kwargs)
-                checked = True
-
-
-            elif self._variable_to_check == value_to_check:
-                self.result = callback(*args, **kwargs)
-                checked = True
+            except Exception as e:
+                raise CallBackException(f'An error has occurred inside of the callback function given. Current SwitchCase configuration: {self._get_config()}') from e
 
         else:
             if self._Check_SubClass:
-                checked = issubclass(type(self._variable_to_check), self._convert_to_types(value_to_check))
+                checked = issubclass(self._variable_to_check, self._convert_to_types(value_to_check))
 
 
             elif self._Check_Instance:
                 checked = isinstance(self._variable_to_check, self._convert_to_types(value_to_check))
 
 
-            elif self._check_address:
+            elif self._Check_Address:
                 checked = self._variable_to_check is value_to_check
 
 

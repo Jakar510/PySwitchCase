@@ -5,46 +5,89 @@ Any improvements and/or optimizations are welcome.
 
 PyPi Page: https://pypi.org/project/PySwitchCase/
 
-# ------------- Usage -------------
-See [this](https://github.com/Jakar510/PySwitchCase/blob/master/src/PySwitchCase/examples.py) for more examples.
+## Getting Started
 
-example 1
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
-    test = 10
-    with SwitchCase(test) as sc:
-        sc(2, on_true=print, on_true_args=('test 1',) )
-        print('sub 1')
-        sc(10, on_true=print, on_true_args=('test 2',) )  # will break here due to match found.
-        print('sub 2')
-        sc(12, on_true=print, on_true_args=('test 3',) )
+### Prerequisites
 
-example 2
+What things you need to install the software and how to install them
 
-    test = '10'
-    with SwitchCase(test, catch_value_to_check=True) as sc:
-        on_true = lambda x: print(f'testing... {x}')
+```
+Give examples
+```
 
-        sc(2, on_true=on_true)
-        print('sub 1')
-        sc('1', on_true=on_true)
-        print('sub 2')
-        sc('10', on_true=on_true)  # will break here due to match found.
+### Installing
 
-example 3
-    
-    def run_test(*args, **kwargs):
-        return {
-                'args': args,
-                'kwargs': kwargs
-                }
-    test = '10'
-    switcher = SwitchCase(test, catch_value_to_check=True)
-    with switcher as sc:
-        on_true = lambda x: run_test(x, test=True)
+A step by step series of examples that tell you how to get a development env running
 
-        sc(2, on_true=on_true)
-        print('sub 1')
-        sc('1', on_true=on_true)  # will break here.
-        print('sub 2')
-        sc('10', on_true=on_true)
-    print(switcher.result)
+Say what the step will be
+
+```
+Give the example
+```
+
+And repeat
+
+```
+until finished
+```
+
+End with an example of getting some data out of the system or using it for a little demo
+
+## Running the tests
+
+Explain how to run the automated tests for this system
+
+### Break down into end to end tests
+
+Explain what these tests test and why
+
+```
+Give an example
+```
+
+### And coding style tests
+
+Explain what these tests test and why
+
+```
+Give an example
+```
+
+
+# Usage Examples
+
+See [examples](https://github.com/Jakar510/PySwitchCase/blob/master/src/PySwitchCase/examples.py). 
+
+## Deployment
+
+Add additional notes about how to deploy this on a live system
+
+## Built With
+
+* 
+
+## Object Structure
+
+Please read [object_structure.json](https://github.com/Jakar510/PythonTkinterBindings/blob/master/src/object_struture.json) for details on the structure.
+
+## Contributing
+
+Please read [CONTRIBUTING.md]() for details on our code of conduct, and the process for submitting pull requests to us.
+
+## Authors
+
+* **Tyler Stegmaier** - *Initial work* - [Jakar510](https://github.com/Jakar510)
+
+See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+
+## Acknowledgments
+
+* Hat tip to anyone whose code was used
+* Inspiration
+* etc
