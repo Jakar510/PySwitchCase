@@ -1,3 +1,10 @@
-rm ./dist/*
-python setup.py sdist bdist_wheel
+rmdir /Q /S dist
+mkdir dist
+
+pause
+
+python setup.py build sdist bdist_wheel
+
 python -m twine upload dist/*
+
+pause
