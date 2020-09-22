@@ -3,74 +3,12 @@ A pure python way to efficiently do a c++ style switch case in Python 3.7+. Shou
 
 Any improvements and/or optimizations are welcome.
 
-PyPi Page: https://pypi.org/project/PySwitchCase/
-
-## Getting Started
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
-### Prerequisites
-
-What things you need to install the software and how to install them
-
-```
-Give examples
-```
-
-### Installing
-
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
-
-```
-Give the example
-```
-
-And repeat
-
-```
-until finished
-```
-
-End with an example of getting some data out of the system or using it for a little demo
-
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
+[PyPi Page](https://pypi.org/project/PySwitchCase/)
 
 
 # Usage Examples
 
-See [examples](https://github.com/Jakar510/PySwitchCase/blob/master/src/PySwitchCase/examples.py). 
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* 
-
-## Object Structure
-
-Please read [object_structure.json](https://github.com/Jakar510/PythonTkinterBindings/blob/master/src/object_struture.json) for details on the structure.
+See [examples](src/PySwitchCase/examples.py). 
 
 ## Contributing
 
@@ -86,8 +24,4 @@ See also the list of [contributors](https://github.com/your/project/contributors
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
-## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
