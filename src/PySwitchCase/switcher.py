@@ -2,19 +2,15 @@ import re
 from abc import ABC
 from typing import Callable, Dict, Tuple
 
+from .exceptions import *
 
 
 
-__all__ = ['SwitchCase', 'CallBackException', 'ActiveSessionError', 'InvalidRegexObject', 'InactiveSessionError']
 
-class BreakCase(Exception): pass
-class ActiveSessionError(Exception): pass
-class InactiveSessionError(Exception): pass
-class InvalidRegexObject(Exception): pass
-class CallBackException(Exception): pass
-
-
-
+__all__ = [
+        'SwitchCase', 'CallbackSwitchCase', 'RegexSwitchCase', 'TypeSwitchCase', 'BaseSwitchCase',
+        'BreakCase', 'CallBackException', 'ActiveSessionError', 'InvalidRegexObject', 'InactiveSessionError'
+        ]
 
 
 def _to_type(obj: any): return type(obj) if obj.__class__ != type.__class__ else obj
@@ -41,6 +37,16 @@ class CallbackhHandler(object):
 
 
 class BaseSwitchCase(object, ABC):
+    """
+     variable: the instance to check against.
+     regex: the instance to check against.
+     regex_pattern: the instance to check against.
+     Check_Address: Checks the addresses between variable and the value_to_check, using "is".
+     catch_value_to_check: If match is True, added the value_to_check to on_true_args at the start.
+     no_match_callback: Optional Method that is called if no match is found or Exception that is raised if no match is found.
+     no_match_handler_args (args): no_match_handler's args
+     no_match_handler_kwargs (kwargs): no_match_handler's kwargs
+    """
     result = None
     _variable: any
     _active: bool = False
@@ -58,8 +64,8 @@ class BaseSwitchCase(object, ABC):
 
     def _get_config(self) -> dict:
         return {
-                'variable':                 repr(self._variable),
-                'no_match_callback':        repr(self.no_match_handler),
+                'variable':          repr(self._variable),
+                'no_match_callback': repr(self.no_match_handler),
                 }
     def __enter__(self):
         self._active = True
@@ -97,55 +103,14 @@ class BaseSwitchCase(object, ABC):
 
 
 class RegexSwitchCase(BaseSwitchCase):
-    """
-        Works on any class or variable type that contains a definition for __eq__.
-        the nested BreakCase exception is the only exception suppressed. All others are passed on.
-
-        ------------- Usage Examples -------------
-
-            # example 1
-            test = 10
-            with SwitchCase(test) as sc:
-                sc(2, on_true=print, on_true_args=('test 1',) )
-                print('sub 1')
-                sc(10, on_true=print, on_true_args=('test 2',) )  # will break here due to match found.
-                print('sub 2')
-                sc(12, on_true=print, on_true_args=('test 3',) )
-
-            # example 2
-            test = '10'
-            with SwitchCase(test, catch_value_to_check=True) as sc:
-                on_true = lambda x: print(f'testing... {x}')
-
-                sc(2, on_true=on_true)
-                print('sub 1')
-                sc('1', on_true=on_true)
-                print('sub 2')
-                sc('10', on_true=on_true)  # will break here due to match found.
-
-            # example 3
-            def run_test(*args, **kwargs):
-                return {
-                        'args': args,
-                        'kwargs': kwargs
-                        }
-            test = '10'
-            switcher = SwitchCase(test, catch_value_to_check=True)
-            with switcher as sc:
-                on_true = lambda x: run_test(x, test=True)
-
-                sc(2, on_true=on_true)
-                print('sub 1')
-                sc('1', on_true=on_true)  # will break here.
-                print('sub 2')
-                sc('10', on_true=on_true)
-            print(switcher.result)
-    """
-    def __init__(self, regex: re.Pattern or re.compile):
+    _variable: callable
+    def __init__(self, regex: re.Pattern, method: str):
         """
         :param regex: the instance to check against.
         """
-        self._variable = regex
+        if not method in dir(regex): raise ValueError('method must be a callable function of the regex object.')
+        self._variable = getattr(regex, method)
+        if not callable(self._variable): raise TypeError('regex.method is not callble')
 
     def __call__(self, value_to_check: any) -> bool:
         if not self._active: self._raise_inactive()
@@ -158,50 +123,6 @@ class RegexSwitchCase(BaseSwitchCase):
 
 
 class SwitchCase(BaseSwitchCase):
-    """
-        Works on any class or variable type that contains a definition for __eq__.
-        the nested BreakCase exception is the only exception suppressed. All others are passed on.
-
-        ------------- Usage Examples -------------
-
-            # example 1
-            test = 10
-            with SwitchCase(test) as sc:
-                sc(2, on_true=print, on_true_args=('test 1',) )
-                print('sub 1')
-                sc(10, on_true=print, on_true_args=('test 2',) )  # will break here due to match found.
-                print('sub 2')
-                sc(12, on_true=print, on_true_args=('test 3',) )
-
-            # example 2
-            test = '10'
-            with SwitchCase(test, catch_value_to_check=True) as sc:
-                on_true = lambda x: print(f'testing... {x}')
-
-                sc(2, on_true=on_true)
-                print('sub 1')
-                sc('1', on_true=on_true)
-                print('sub 2')
-                sc('10', on_true=on_true)  # will break here due to match found.
-
-            # example 3
-            def run_test(*args, **kwargs):
-                return {
-                        'args': args,
-                        'kwargs': kwargs
-                        }
-            test = '10'
-            switcher = SwitchCase(test, catch_value_to_check=True)
-            with switcher as sc:
-                on_true = lambda x: run_test(x, test=True)
-
-                sc(2, on_true=on_true)
-                print('sub 1')
-                sc('1', on_true=on_true)  # will break here.
-                print('sub 2')
-                sc('10', on_true=on_true)
-            print(switcher.result)
-    """
     def __init__(self, variable: __eq__):
         """
         :param variable: the instance to check against.
@@ -221,56 +142,11 @@ class SwitchCase(BaseSwitchCase):
 
 
 class CallbackSwitchCase(BaseSwitchCase):
-    """
-        Works on any class or variable type that contains a definition for __eq__.
-        the nested BreakCase exception is the only exception suppressed. All others are passed on.
-
-        ------------- Usage Examples -------------
-
-            # example 1
-            test = 10
-            with SwitchCase(test) as sc:
-                sc(2, on_true=print, on_true_args=('test 1',) )
-                print('sub 1')
-                sc(10, on_true=print, on_true_args=('test 2',) )  # will break here due to match found.
-                print('sub 2')
-                sc(12, on_true=print, on_true_args=('test 3',) )
-
-            # example 2
-            test = '10'
-            with SwitchCase(test, catch_value_to_check=True) as sc:
-                on_true = lambda x: print(f'testing... {x}')
-
-                sc(2, on_true=on_true)
-                print('sub 1')
-                sc('1', on_true=on_true)
-                print('sub 2')
-                sc('10', on_true=on_true)  # will break here due to match found.
-
-            # example 3
-            def run_test(*args, **kwargs):
-                return {
-                        'args': args,
-                        'kwargs': kwargs
-                        }
-            test = '10'
-            switcher = SwitchCase(test, catch_value_to_check=True)
-            with switcher as sc:
-                on_true = lambda x: run_test(x, test=True)
-
-                sc(2, on_true=on_true)
-                print('sub 1')
-                sc('1', on_true=on_true)  # will break here.
-                print('sub 2')
-                sc('10', on_true=on_true)
-            print(switcher.result)
-    """
     def __init__(self, variable: __eq__):
         """
         :param variable: the instance to check against.
         """
-        if not hasattr(variable, '__eq__'):
-            raise ValueError(f'variable is not a comparable type. {type(variable)}')
+        if not hasattr(variable, '__eq__'): raise ValueError(f'variable is not a comparable type. {type(variable)}')
 
         self._variable = variable
 
@@ -287,16 +163,6 @@ class CallbackSwitchCase(BaseSwitchCase):
 
 
 class InstanceSwitchCase(BaseSwitchCase):
-    """
-     variable: the instance to check against.
-     regex: the instance to check against.
-     regex_pattern: the instance to check against.
-     Check_Address: Checks the addresses between variable and the value_to_check, using "is".
-     catch_value_to_check: If match is True, added the value_to_check to on_true_args at the start.
-     no_match_callback: Optional Method that is called if no match is found or Exception that is raised if no match is found.
-     no_match_handler_args (args): no_match_handler's args
-     no_match_handler_kwargs (kwargs): no_match_handler's kwargs
-    """
     def __init__(self, variable: __eq__):
         if not hasattr(variable, '__eq__'):
             raise ValueError(f'variable is not comparable type. {type(variable)}')
@@ -312,16 +178,6 @@ class InstanceSwitchCase(BaseSwitchCase):
 
 
 class TypeSwitchCase(BaseSwitchCase):
-    """
-     variable: the instance to check against.
-     regex: the instance to check against.
-     regex_pattern: the instance to check against.
-     Check_Address: Checks the addresses between variable and the value_to_check, using "is".
-     catch_value_to_check: If match is True, added the value_to_check to on_true_args at the start.
-     no_match_callback: Optional Method that is called if no match is found or Exception that is raised if no match is found.
-     no_match_handler_args (args): no_match_handler's args
-     no_match_handler_kwargs (kwargs): no_match_handler's kwargs
-    """
     def __init__(self, variable: type):
         if not hasattr(variable, '__eq__'):
             raise ValueError(f'variable is not comparable type. {type(variable)}')
